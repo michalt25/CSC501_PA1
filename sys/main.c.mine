@@ -4,7 +4,6 @@
 #include <sched.h>
 #include <stdio.h>
 #include <math.h>
-#include <proc.h>
 
 #define LOOP	50
 
@@ -106,9 +105,9 @@ int main() {
 			break;
 		}
 
-                printf("Total = %d\n", (int)e_total);
-                printf("Num   = %d\n", e_num);
-                printf("Avg   = %d\n", (int)(e_total/e_num));
+              //printf("Total = %d\n", (int)e_total);
+              //printf("Num   = %d\n", e_num);
+              //printf("Avg   = %d\n", (int)(e_total/e_num));
 	}
 	// LINUXSCHED
 	else {

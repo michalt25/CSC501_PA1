@@ -2,18 +2,11 @@
 
 #include <stdio.h>
 
-// Maximum value for long type. long is 4 bytes on
-// XINU therefore max value is 0xffffffff.
-//#define RAND_MAX 0xffffffff
-//#define RAND_MAX 0xffff
-//#define RAND_MAX 77778
-//#define RAND_MAX 32767
-//#define RAND_MAX                10010111111010001
-//#define RAND_MAX 00000000000000001111111111111111
-//#define RAND_MAX 65535
-//#define RAND_MAX 65536
+// Looking at rand(), a value is computed and then gets anded (&)
+// with octal 077777. This is then returned as the random number. 
+// This means that the maximum possible value ever returned will be
+// octal 077777. Thus RAND_MAX is (077777 + 1).
 #define RAND_MAX (077777 + 1)
-//#define RAND_MAX 0100000
 
 double pow(double x, int y) {
     double tmp = x;
@@ -46,6 +39,8 @@ double expdev(double lambda) {
     do 
         dummy = (double) rand() / RAND_MAX; 
     while (dummy == 0.0); 
+    //
+    // XXX Is this needed?
     if (dummy < 0) 
         dummy = -dummy;
     return -log(dummy) / lambda;

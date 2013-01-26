@@ -68,8 +68,4 @@ extern  int numproc;        /* currently active processes   */
 extern  int nextproc;       /* search point for free slot   */
 extern  int currpid;        /* currently executing process  */
 
-// XXX dusty remove these
-extern double e_total;
-extern int    e_num;
-
 #endif

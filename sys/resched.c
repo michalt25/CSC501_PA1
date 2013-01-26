@@ -6,9 +6,6 @@
 #include <q.h>
 #include <math.h>
 
-double e_total = 0.0;
-int e_num = 0;
-
 unsigned long currSP;   /* REAL sp of current process */
 extern int ctxsw(int, int, int, int);
 /*-----------------------------------------------------------------------
@@ -41,10 +38,6 @@ int resched()
 
     optr = &proctab[currpid];
     mark = expdev(0.1);
-
-    e_total += mark;
-    e_num   += 1;
-
 
     // NOTE: There is an array in memory that make up several 
     //       queues including the ready queue structure. This
@@ -138,34 +131,4 @@ int resched()
     /* The OLD process returns here when resumed. */
     return OK;
 
-//ORIG
-
-
-////    /* no switch needed if current process priority higher than next*/
-
-////    if ( ( (optr= &proctab[currpid])->pstate == PRCURR) &&
-////       (lastkey(rdytail)<optr->pprio)) {
-////        return(OK);
-////    }
-////    
-////    /* force context switch */
-
-////    if (optr->pstate == PRCURR) {
-////        optr->pstate = PRREADY;
-////        insert(currpid,rdyhead,optr->pprio);
-////    }
-
-////    /* remove highest priority process at end of ready list */
-
-////    nptr = &proctab[ (currpid = getlast(rdytail)) ];
-////    nptr->pstate = PRCURR;      /* mark it currently running    */
-////#ifdef  RTCLOCK
-////    preempt = QUANTUM;      /* reset preemption counter */
-////#endif
-////    
-////    ctxsw((int)&optr->pesp, (int)optr->pirmask, (int)&nptr->pesp, (int)nptr->pirmask);
-////    
-////    /* The OLD process returns here when resumed. */
-////    return OK;
-//ORIG
 }
