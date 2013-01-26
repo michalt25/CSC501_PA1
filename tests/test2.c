@@ -13,25 +13,20 @@ main()
 {
 	int i;
 
-        kprintf("\n\nRound Robin Test:\n");
+        kprintf("\n\nTEST2:\n");
 
 	prA = create(prch,2000,30,"proc A",1,'A');
 	prB = create(prch,2000,30,"proc B",1,'B');
 	prC = create(prch,2000,30,"proc C",1,'C');
 
-	resume(prA);
-	resume(prB);
 	resume(prC);
+	resume(prB);
+	resume(prA);
 
-	sleep10(1);
-	kill(prA);
-	kill(prB);
-	kill(prC);
-
-////////while(1) {
-////////	kprintf("%c", 'D');
-////////	for (i = 0; i< 1000000; i++);
-////////}
+	while(1) {
+		kprintf("%c", 'D');
+		for (i = 0; i< 10000; i++);
+	}
 }
 
 prch(c)
@@ -41,7 +36,7 @@ char c;
 
 	while(1) {
 		kprintf("%c", c);
-		for (i = 0; i< 1000000; i++);
+		for (i = 0; i< 10000; i++);
 	}
 }
 

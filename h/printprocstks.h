@@ -1,0 +1,1 @@
+void printprocstks(int priority);
