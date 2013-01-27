@@ -9,6 +9,8 @@
 
 unsigned long currSP;   /* REAL sp of current process */
 extern int ctxsw(int, int, int, int);
+int goodness(struct pentry *p);
+void newepoch();
 /*-----------------------------------------------------------------------
  * resched  --  reschedule processor to highest priority ready process
  *
@@ -25,6 +27,10 @@ int resched()
     int item;    // Index of new process in qent array
     int class;   // The class of scheduling we are using
     double mark; // The random number from expdev()
+
+        int tmp;
+        int weight;
+        int nitem;
 
     // Get pointer to current process entry
     optr = &proctab[currpid];
@@ -53,10 +59,9 @@ int resched()
     //
 
     // If the ready queue is empty then just stick with the 
-    // current process. 
+    // current process (NULL PROCESS). 
     if ((optr->pstate == PRCURR) && isempty(rdyhead))
-        return(OK);
-
+        return OK;
 
     // Perform scheduling based on what scheduling algorithm we
     // are using.
@@ -112,9 +117,11 @@ int resched()
             item = q[item].qnext;
 
 
-        // If we somehow ended up on the item it means that the random 
+        // If we somehow ended up on the tail item it means that the random 
         // value is larger than the largest priority in the ready queue. 
         // We must choose the value with the largest priority in this case.
+        //
+        // Note: This will select NULLPROC if no other processes are ready
         if (item == rdytail)
             item = q[rdytail].qprev;
 
@@ -124,7 +131,7 @@ int resched()
         // selected processes priority then don't context switch. 
         if ((mark < optr->pprio) && (optr->pprio < q[item].qkey))
             if (optr->pstate == PRCURR)
-                return(OK);
+                return OK;
 
         //XXX need to do anything for null process?
         //
@@ -137,41 +144,96 @@ int resched()
         // Linux Scheduler
         //////////////
 
+        // Update counter for current process
+        // preempt was set to counter before. Now the amount of time
+        // that has passed has been (counter - preempt). Subtract
+        // that amount of time from the counter.
+        if (optr->counter)
+            optr->counter = preempt; // Same thing as optr->counter = optr->counter - (optr->counter - preempt);
+        if (optr->counter < 0)
+            optr->counter = 0;
+
+
         // XXX needed?
         // If prev is not in the TASK_RUNNING state, schedule( ) was directly invoked by the process itself because it had to wait on some external resource; therefore, prev must be removed from the runqueue list:
 
-        weight = goodness(optr);
-        nptr = optr;
-        int tmp;
-        int nitem = -1;
+
+    while(1) {
+
+        if (optr->pstate == PRCURR) {
+            nitem  = -1;
+            weight = goodness(optr);
+        } else {
+            nitem  = q[rdyhead].qnext;
+            weight = goodness(&proctab[nitem]);
+        }
 
         // Do i make the keys the weight?
 
-        item = rdyhead;
+        // How to do round robin with weights?
+
+        item = q[rdyhead].qnext;
         while (item != rdytail) {
-            item = q[item].qnext;
             tmp = goodness(&proctab[item]);
-            if (tmp > weight) {
+            if (tmp >= weight) {
                 weight = tmp;
                 nitem = item;
             }
+            item = q[item].qnext;
         }
+
+
+        // A couple of possibilities here:
+        //
+        // weight == -1 - The null process is the only process
+        // weight ==  0 - All quantum for all processes is exhausted
+        // weight  >  0 - There is an eligible process
+
+
+      //if (weight == -1) {
+      //    if (currpid == NULLPROC)
+      //        if (optr->pstate == PRCURR)
+      //        return OK;
+
+      //    item = 0;
+      //    break;
+      //}
+
+      //if (weight > 0) {
+
+      //    if (currpid == nitem)
+      //        if (optr->pstate == PRCURR)
+      //        return OK;
+
+      //    item = nitem;
+      //    break;
+
+      //}
 
         // If no processes were eligible then the epoch is done.
         // Recalculate.
         if (weight == 0) {
             newepoch();
-            return resched();
+            continue;
         }
 
-        // If 
-        if (nitem == -1)
+        // It is ok to stick with the running process if no
+        // better candidate was found 
+        if ((nitem == -1) && (optr->pstate == PRCURR)) {
+            preempt = optr->counter;
             return OK;
+        }
 
         item = nitem;
+        break;
+        }
     }
 
 
+    // If the ready queue is empty and the current proc is
+    // done then use NULL process.
+  //if ((optr->pstate != PRCURR) && isempty(rdyhead))
+  //    item = 0;
 
 
     // If we get here then we are not sticking with the current
@@ -187,6 +249,12 @@ int resched()
     dequeue(item);              // Remove the process from the ready list  
     nptr = &proctab[currpid];   // Get a pointer to the PCB(pentry) for the proc
     nptr->pstate = PRCURR;      // mark it currently running
+
+// XXX need to only do this for LINUXSCHED
+  //if (item)
+    preempt = nptr->counter;
+  //else 
+  //preempt = 10;
     
     ctxsw((int)&optr->pesp, (int)optr->pirmask, (int)&nptr->pesp, (int)nptr->pirmask);
     
@@ -196,7 +264,11 @@ int resched()
 }
 
 
-int goodness(struct pentry p) {
+int goodness(struct pentry *p) {
+
+    // XXXhandle null proc?
+    if (p == &proctab[0])
+        return -1;
 
     // If the process has exhausted its quantum then
     // its goodness is 0
@@ -215,10 +287,10 @@ int goodness(struct pentry p) {
 void newepoch() {
 
     int i;
-    struct pentry p;
+    struct pentry *p;
 
 
-    for (i=1; i < NPROC; i++) {
+    for (i=0; i < NPROC; i++) {
 
         p = &proctab[i];
 

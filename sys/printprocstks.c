@@ -1,6 +1,7 @@
 #include <kernel.h>
 #include <proc.h>
 #include <stdio.h>
+#include <q.h>
 
 
 static unsigned long *esp;
