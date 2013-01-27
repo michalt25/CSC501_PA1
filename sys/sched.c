@@ -1,7 +1,6 @@
-/* sched.h */
+/* sched.c */
 
-#define EXPDISTSCHED 1
-#define LINUXSCHED   2
+#include <sched.h>
 
 int schedclass = EXPDISTSCHED;
 

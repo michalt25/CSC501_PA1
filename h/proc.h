@@ -43,6 +43,7 @@
 struct  pentry  {
     char     pstate;         /* process state: PRCURR, etc.  */
     int      pprio;          /* process priority     */
+    int      counter;        /* The amount of quantum left this epoch */
     int      pesp;           /* saved stack pointer      */
     STATWORD pirmask;        /* saved interrupt mask     */
     int      psem;           /* semaphore if process waiting */
