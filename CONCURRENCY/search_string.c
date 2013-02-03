@@ -33,23 +33,20 @@
 #define STDIN_FD 0
 #define MAX_SEARCH 80
 
-#define handle_error_en(en, msg) \
-       do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
-
-#define handle_error(msg) \
-       do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
 struct thread_info {    /* Used as argument to thread_start() */
-   pthread_t thread_id;        /* ID returned by pthread_create() */
-   int       thread_num;       /* Application-defined thread # */
-   char     *argv_string;      /* From command-line argument */
+   pthread_t thread_id;        // ID returned by pthread_create()
+   int       tnum;             // Application-defined thread #
+   int       bsize;            // Size (bytes) of assigned block of the string
+   char     *start;            // Location of the start of the block
+   char     *pattern;          // Location of a string representing the search pattern
 };
 
 
 
 // Function declarations
 void stdin_to_memory();
-void find_matches();
+int find_matches(char* start, int size, char* pattern);
 
 
 // This is a global pointer that will point to the location in
@@ -59,7 +56,7 @@ char *data;
 
 // The size of the file passed in on STDIN in bytes
 long fsize;
-void find_matches(char* start, int size, char* pattern) {
+int find_matches(char* start, int size, char* pattern) {
 
     char* end = start + size + MAX_SEARCH;
 
@@ -82,108 +79,120 @@ void find_matches(char* start, int size, char* pattern) {
         count++;
     }
 
-    printf("Count %d\n", count);
+  //printf("Count %d\n", count);
+
+    return count;
 
 }
 
 
-/* Thread start function: display address near top of our stack,
-  and return upper-cased copy of argv_string */
-
+// Thread start function
 static void * thread_start(void *arg) {
-   struct thread_info *tinfo = (struct thread_info *) arg;
-   char *uargv, *p;
-
-   printf("Thread %d: top of stack near %p; argv_string=%s\n",
-           tinfo->thread_num, &p, tinfo->argv_string);
-
-   uargv = strdup(tinfo->argv_string);
-   if (uargv == NULL)
-       handle_error("strdup");
-
-   for (p = uargv; *p != '\0'; p++)
-       *p = toupper(*p);
-
-   return uargv;
+    struct thread_info *tinfo = (struct thread_info *) arg;
+    return (void *) find_matches(tinfo->start, tinfo->bsize, tinfo->pattern);
 }
 
 int main(int argc, char *argv[]) {
-   int s, tnum, opt, num_threads;
-   struct thread_info *tinfo;
-   pthread_attr_t attr;
-   int stack_size;
-   void *res;
+    char* pattern;
+    int count, i, rc, nthreads, blocksize;
+    struct thread_info *tinfo;
+    pthread_attr_t attr;
 
-    if (argc != 2)
-        fprintf(stderr, "Expected 2 arguments");
+    void* x;
+
+    if (argc != 2) {
+        fprintf(stderr, "Expected 2 arguments\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // The pattern we are searching for was provided
+    // on the command line;
+    pattern = argv[1];
+    nthreads = 10;
 
     stdin_to_memory();
+
+    blocksize = fsize/nthreads + 1;
 
    // printf("%s", data);
 
     //find_matches(data, fsize, "This is");
-    find_matches(data, fsize, argv[1]);
+//  find_matches(data, fsize, argv[1]);
 
-    exit(EXIT_SUCCESS);
-
-
-   num_threads = argc - optind;
-
-   /* Initialize thread creation attributes */
-
-   s = pthread_attr_init(&attr);
-   if (s != 0)
-       handle_error_en(s, "pthread_attr_init");
-
-   if (stack_size > 0) {
-       s = pthread_attr_setstacksize(&attr, stack_size);
-       if (s != 0)
-           handle_error_en(s, "pthread_attr_setstacksize");
-   }
-
-   /* Allocate memory for pthread_create() arguments */
-
-   tinfo = calloc(num_threads, sizeof(struct thread_info));
-   if (tinfo == NULL)
-       handle_error("calloc");
+// exit(EXIT_SUCCESS);
 
 
 
-   /* Create one thread for each command-line argument */
 
-   for (tnum = 0; tnum < num_threads; tnum++) {
-       tinfo[tnum].thread_num = tnum + 1;
-       tinfo[tnum].argv_string = argv[optind + tnum];
+    // Initialize thread creation attributes
+    rc = pthread_attr_init(&attr);
+    if (rc != 0) {
+       errno = rc;
+       perror("pthread_attr_init");
+       exit(EXIT_FAILURE);
+    }
 
-       /* The pthread_create() call stores the thread ID into
-          corresponding element of tinfo[] */
+    // Allocate memory for pthread_create() arguments
+    tinfo = calloc(nthreads, sizeof(struct thread_info));
+    if (tinfo == NULL) {
+       perror("calloc");
+       exit(EXIT_FAILURE);
+    }
 
-       s = pthread_create(&tinfo[tnum].thread_id, &attr,
-                          &thread_start, &tinfo[tnum]);
-       if (s != 0)
-           handle_error_en(s, "pthread_create");
-   }
 
-   /* Destroy the thread attributes object, since it is no
-      longer needed */
+    // Spawn off nthreads
+    for (i = 0; i < nthreads; i++) {
+        tinfo[i].tnum    = i+1;
+        tinfo[i].bsize   = blocksize; 
+        tinfo[i].start   = data + blocksize*i; 
+        tinfo[i].pattern = pattern; 
+        
 
-   s = pthread_attr_destroy(&attr);
-   if (s != 0)
-       handle_error_en(s, "pthread_attr_destroy");
+        // The pthread_create() call stores the thread ID into
+        // corresponding element of tinfo[]
+        rc = pthread_create(
+            &tinfo[i].thread_id, 
+            &attr,
+            &thread_start,
+            &tinfo[i]
+        );
+        if (rc != 0) {
+            errno = rc;
+            perror("pthread_create");
+            exit(EXIT_FAILURE);
+        }
+    }
 
-   /* Now join with each thread, and display its returned value */
+    // Destroy the thread attributes object, since it is no longer needed 
+    rc = pthread_attr_destroy(&attr);
+    if (rc != 0) {
+        errno = rc;
+        perror("pthread_attr_destroy");
+        exit(EXIT_FAILURE);
+    }
 
-   for (tnum = 0; tnum < num_threads; tnum++) {
-       s = pthread_join(tinfo[tnum].thread_id, &res);
-       if (s != 0)
-           handle_error_en(s, "pthread_join");
 
-       printf("Joined with thread %d; returned value was %s\n",
-               tinfo[tnum].thread_num, (char *) res);
-       free(res);      /* Free memory allocated by thread */
-   }
+
+    // Now join with each thread, and display its returned value
+    for (i = 0; i < nthreads; i++) {
+        rc = pthread_join(tinfo[i].thread_id, &x);
+        if (rc != 0) {
+            errno = rc;
+            perror("pthread_join");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("Joined with thread %d; returned value was %d\n",
+               tinfo[i].tnum, (int) x);
+
+        count += x;
+
+    }
+
+    printf("Total Count: %d\n", count);
 
    free(tinfo);
+   free(data);
    exit(EXIT_SUCCESS);
 }
 
@@ -219,9 +228,10 @@ void stdin_to_memory() {
     // Now that we know the size lets allocate a chunk of memory
     // large enough to handle it. 
     cursor = data = calloc(fsize, sizeof(char));
-    if (data == NULL)
-       handle_error("data"); //XXX
-
+    if (data == NULL) {
+        perror("data");
+        exit(EXIT_FAILURE);
+    }
 
     // Read in the file from STDIN 
     while(nr = read(STDIN_FD, cursor, 50))
