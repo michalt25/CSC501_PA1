@@ -65,7 +65,7 @@ int find_matches(char* start, int size, char* pattern) {
 
         // Move loc past the current instance of 
         // the pattern. 
-        loc += sizeof(pattern);
+        loc += strlen(pattern);
 
         // Bump our instance counter and move on
         count++;
@@ -185,14 +185,9 @@ int main(int argc, char *argv[]) {
         secs  = tv2.tv_sec - tv1.tv_sec;
         usecs = secs*1000000 + tv2.tv_usec - tv1.tv_usec;
 
-
-
         printf("nthreads: %d, Total Count: %d, usecs: %lu\n", nthreads, count, usecs);
         free(tinfo);
     }
-
-
-
 
    free(data);
    exit(EXIT_SUCCESS);
@@ -236,7 +231,7 @@ void stdin_to_memory() {
     }
 
     // Read in the file from STDIN 
-    while(nr = read(STDIN_FD, cursor, 50))
+    while(nr = read(STDIN_FD, cursor, 128))
         cursor += nr;
 
 }
