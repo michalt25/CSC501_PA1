@@ -48,6 +48,7 @@ static void * thread_start(void *arg) {
 
 int main(int argc, char *argv[]) {
     char* pattern;
+    char* tmp;
     int i, rc, nthreads, blocksize;
     struct thread_info *tinfo;
     pthread_attr_t attr;
@@ -77,6 +78,8 @@ int main(int argc, char *argv[]) {
         // Set the size that each thread will work on
         blocksize = fsize/nthreads + 1;
 
+
+
         // Initialize thread creation attributes
         rc = pthread_attr_init(&attr);
         if (rc != 0) {
@@ -92,15 +95,27 @@ int main(int argc, char *argv[]) {
            exit(EXIT_FAILURE);
         }
 
+        // Prepare the thread info data structures for each thread
+        for (i = 0; i < nthreads; i++) {
+            tinfo[i].tnum    = i+1;
+            tinfo[i].pattern = pattern; 
+
+            // Make a copy of the data this thread will operate on.
+            // Make it MAX_SEARCH longer than it needs to be so that
+            // we can handle matches across boundaries
+            tinfo[i].start = strndup(data + blocksize*i, blocksize + MAX_SEARCH);
+
+            // If we are in the very last block then adjust the blocksize 
+            if ((data + blocksize*i) > (data + fsize))
+                tinfo[i].bsize = (data + fsize) - (data + blocksize*i); 
+            else 
+                tinfo[i].bsize = blocksize; 
+        }
+
         gettimeofday(&tv1, NULL);
 
         // Spawn off nthreads
         for (i = 0; i < nthreads; i++) {
-            tinfo[i].tnum    = i+1;
-            tinfo[i].bsize   = blocksize; 
-            tinfo[i].start   = data + blocksize*i; 
-            tinfo[i].pattern = pattern; 
-            
 
             // The pthread_create() call stores the thread ID into
             // corresponding element of tinfo[]
@@ -136,6 +151,9 @@ int main(int argc, char *argv[]) {
 
           //printf("Joined with thread %d; returned value was %d\n",
           //       tinfo[i].tnum, (int) x);
+
+
+            free(tinfo[i].start);
 
             count += (unsigned int) x;
 
@@ -180,9 +198,6 @@ void stdin_to_memory() {
     // Set the global var fsize to be the size of the file 
     fsize = sb.st_size;
 
-    //printf("Size is %lld\n", (long long) sb.st_size);
-
-
     // Now that we know the size lets allocate a chunk of memory
     // large enough to handle it. 
     cursor = data = calloc(fsize, sizeof(char));
@@ -208,20 +223,14 @@ int find_matches(char* start, int size, char* pattern) {
     char* end;
     char* loc;
     int count = 0;
+    int searchlen = strlen(pattern);
 
-    // Determine where the end of our block is. Make sure it
-    // isn't past the end of the entire string of data.
+    // Determine where the end of our block is. We won't 
+    // accept any matches past the end of the block.
     end = start + size;
-    if (end > (data + fsize))
-        end = data + fsize;
 
-    // Update size variable (could have changed)
-    size = end - start;
-
-    // Make a copy of our block of data since we can't call strstr
-    // with a fixed length. update start and end variables.
-    loc = start = strndup(start, size + MAX_SEARCH);
-    end = start + size;
+    // Update temporary variable to point to start of block
+    loc = start;
 
     // Iterate through the string finding matches along the way
     while (loc = strstr(loc, pattern)) {
@@ -230,14 +239,11 @@ int find_matches(char* start, int size, char* pattern) {
 
         // Move loc past the current instance of 
         // the pattern. 
-        loc += strlen(pattern);
+        loc += searchlen;
 
         // Bump our instance counter and move on
         count++;
     }
-
-    // Clean up the copy we just created. 
-    free(start);
 
     // Return the value to the caller.
     return count;
