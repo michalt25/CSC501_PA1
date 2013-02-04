@@ -3,10 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <errno.h>
-#include <ctype.h>
-
 #include <sys/stat.h>
 #include <sys/time.h>
 
@@ -16,6 +13,10 @@
 #define MAX_SEARCH 80 // The maximum length of the search string
 
 
+// Note: The code for creating and joining threads was heavily
+//       mirrored after the code in the pthread_create man page.
+
+
 struct thread_info {    /* Used as argument to thread_start() */
    pthread_t thread_id;        // ID returned by pthread_create()
    int       tnum;             // Application-defined thread #
@@ -23,7 +24,6 @@ struct thread_info {    /* Used as argument to thread_start() */
    char     *start;            // Location of the start of the block
    char     *pattern;          // Location of a string representing the search pattern
 };
-
 
 
 // Function declarations
@@ -38,45 +38,6 @@ char *data;
 
 // The size of the file passed in on STDIN in bytes
 long fsize;
-int find_matches(char* start, int size, char* pattern) {
-
-    char* end;
-    char* loc;
-    int count = 0;
-
-    // Determine where the end of our block is. Make sure it
-    // isn't past the end of the entire string of data.
-    end = start + size;
-    if (end > (data + fsize))
-        end = data + fsize;
-
-    // Update size variable (could have changed)
-    size = end - start;
-
-    // Make a copy of our block of data since we can't call strstr
-    // with a fixed length. update start and end variables.
-    loc = start = strndup(start, size + MAX_SEARCH);
-    end = start + size;
-
-    // Iterate through the string finding matches along the way
-    while (loc = strstr(loc, pattern)) {
-        if (loc >= end)
-            break;
-
-        // Move loc past the current instance of 
-        // the pattern. 
-        loc += strlen(pattern);
-
-        // Bump our instance counter and move on
-        count++;
-    }
-
-    // Clean up the copy we just created. 
-    free(start);
-
-    // Return the value to the caller.
-    return count;
-}
 
 
 // Thread start function
@@ -234,5 +195,51 @@ void stdin_to_memory() {
     while(nr = read(STDIN_FD, cursor, 128))
         cursor += nr;
 
+}
+
+
+/*
+ * To be called by thread_start(). This function make a copy of the
+ * block defined by start and size and will then find all matching
+ * strings within that block.
+ */
+int find_matches(char* start, int size, char* pattern) {
+
+    char* end;
+    char* loc;
+    int count = 0;
+
+    // Determine where the end of our block is. Make sure it
+    // isn't past the end of the entire string of data.
+    end = start + size;
+    if (end > (data + fsize))
+        end = data + fsize;
+
+    // Update size variable (could have changed)
+    size = end - start;
+
+    // Make a copy of our block of data since we can't call strstr
+    // with a fixed length. update start and end variables.
+    loc = start = strndup(start, size + MAX_SEARCH);
+    end = start + size;
+
+    // Iterate through the string finding matches along the way
+    while (loc = strstr(loc, pattern)) {
+        if (loc >= end)
+            break;
+
+        // Move loc past the current instance of 
+        // the pattern. 
+        loc += strlen(pattern);
+
+        // Bump our instance counter and move on
+        count++;
+    }
+
+    // Clean up the copy we just created. 
+    free(start);
+
+    // Return the value to the caller.
+    return count;
 }
 
