@@ -1,26 +1,4 @@
 
-////void main () {
-
-////    // Search strings no longer than 80 chars
-////    //
-
-
-////    // Each thread handles the length of search_string more over the
-////    // end of their boundary.. This accounts for matches that may
-////    // occur on block boundaries. 
-//
-
-////    // Vary # of threads. blocksize is equal to size of file
-////    // divided by # of threads.
-//
-////    // Need to use gettimeofday()
-//
-//      // use scanf for string match detection
-
-
-////}
-
-
 #include <pthread.h>
 #include <string.h>
 #include <stdio.h>
@@ -30,8 +8,12 @@
 #include <ctype.h>
 
 #include <sys/stat.h>
+#include <sys/time.h>
+
+
+
 #define STDIN_FD 0
-#define MAX_SEARCH 80
+#define MAX_SEARCH 80 // The maximum length of the search string
 
 
 struct thread_info {    /* Used as argument to thread_start() */
@@ -58,20 +40,30 @@ char *data;
 long fsize;
 int find_matches(char* start, int size, char* pattern) {
 
-    char* end = start + size + MAX_SEARCH;
+    char* end;
+    char* loc;
+    int count = 0;
 
+    // Determine where the end of our block is. Make sure it
+    // isn't past the end of the entire string of data.
+    end = start + size;
     if (end > (data + fsize))
         end = data + fsize;
 
-    char* loc = start;
+    // Update size variable (could have changed)
+    size = end - start;
 
-    int count = 0;
+    // Make a copy of our block of data since we can't call strstr
+    // with a fixed length. update start and end variables.
+    loc = start = strndup(start, size + MAX_SEARCH);
+    end = start + size;
 
+    // Iterate through the string finding matches along the way
     while (loc = strstr(loc, pattern)) {
-        if (loc > end)
+        if (loc >= end)
             break;
 
-        // Move loc pass the current instance of 
+        // Move loc past the current instance of 
         // the pattern. 
         loc += sizeof(pattern);
 
@@ -79,10 +71,11 @@ int find_matches(char* start, int size, char* pattern) {
         count++;
     }
 
-  //printf("Count %d\n", count);
+    // Clean up the copy we just created. 
+    free(start);
 
+    // Return the value to the caller.
     return count;
-
 }
 
 
@@ -94,9 +87,13 @@ static void * thread_start(void *arg) {
 
 int main(int argc, char *argv[]) {
     char* pattern;
-    int count, i, rc, nthreads, blocksize;
+    int i, rc, nthreads, blocksize;
     struct thread_info *tinfo;
     pthread_attr_t attr;
+    unsigned int count;
+
+    struct timeval tv1,tv2;
+    unsigned long secs, usecs;
 
     void* x;
 
@@ -108,90 +105,95 @@ int main(int argc, char *argv[]) {
     // The pattern we are searching for was provided
     // on the command line;
     pattern = argv[1];
-    nthreads = 10;
 
+    // Read the file into memory
     stdin_to_memory();
 
-    blocksize = fsize/nthreads + 1;
 
-   // printf("%s", data);
-
-    //find_matches(data, fsize, "This is");
-//  find_matches(data, fsize, argv[1]);
-
-// exit(EXIT_SUCCESS);
-
-
-
-
-    // Initialize thread creation attributes
-    rc = pthread_attr_init(&attr);
-    if (rc != 0) {
-       errno = rc;
-       perror("pthread_attr_init");
-       exit(EXIT_FAILURE);
-    }
-
-    // Allocate memory for pthread_create() arguments
-    tinfo = calloc(nthreads, sizeof(struct thread_info));
-    if (tinfo == NULL) {
-       perror("calloc");
-       exit(EXIT_FAILURE);
-    }
-
-
-    // Spawn off nthreads
-    for (i = 0; i < nthreads; i++) {
-        tinfo[i].tnum    = i+1;
-        tinfo[i].bsize   = blocksize; 
-        tinfo[i].start   = data + blocksize*i; 
-        tinfo[i].pattern = pattern; 
+    for (nthreads = 1; nthreads <= 100; nthreads++) {
+        count = 0;
         
+        // Set the size that each thread will work on
+        blocksize = fsize/nthreads + 1;
 
-        // The pthread_create() call stores the thread ID into
-        // corresponding element of tinfo[]
-        rc = pthread_create(
-            &tinfo[i].thread_id, 
-            &attr,
-            &thread_start,
-            &tinfo[i]
-        );
+        // Initialize thread creation attributes
+        rc = pthread_attr_init(&attr);
         if (rc != 0) {
-            errno = rc;
-            perror("pthread_create");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // Destroy the thread attributes object, since it is no longer needed 
-    rc = pthread_attr_destroy(&attr);
-    if (rc != 0) {
-        errno = rc;
-        perror("pthread_attr_destroy");
-        exit(EXIT_FAILURE);
-    }
-
-
-
-    // Now join with each thread, and display its returned value
-    for (i = 0; i < nthreads; i++) {
-        rc = pthread_join(tinfo[i].thread_id, &x);
-        if (rc != 0) {
-            errno = rc;
-            perror("pthread_join");
-            exit(EXIT_FAILURE);
+           errno = rc;
+           perror("pthread_attr_init");
+           exit(EXIT_FAILURE);
         }
 
-        printf("Joined with thread %d; returned value was %d\n",
-               tinfo[i].tnum, (int) x);
+        // Allocate memory for pthread_create() arguments
+        tinfo = calloc(nthreads, sizeof(struct thread_info));
+        if (tinfo == NULL) {
+           perror("calloc");
+           exit(EXIT_FAILURE);
+        }
 
-        count += x;
+        gettimeofday(&tv1, NULL);
 
+        // Spawn off nthreads
+        for (i = 0; i < nthreads; i++) {
+            tinfo[i].tnum    = i+1;
+            tinfo[i].bsize   = blocksize; 
+            tinfo[i].start   = data + blocksize*i; 
+            tinfo[i].pattern = pattern; 
+            
+
+            // The pthread_create() call stores the thread ID into
+            // corresponding element of tinfo[]
+            rc = pthread_create(
+                &tinfo[i].thread_id, 
+                &attr,
+                &thread_start,
+                &tinfo[i]
+            );
+            if (rc != 0) {
+                errno = rc;
+                perror("pthread_create");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        // Destroy the thread attributes object, since it is no longer needed 
+        rc = pthread_attr_destroy(&attr);
+        if (rc != 0) {
+            errno = rc;
+            perror("pthread_attr_destroy");
+            exit(EXIT_FAILURE);
+        }
+
+        // Now join with each thread, and display its returned value
+        for (i = 0; i < nthreads; i++) {
+            rc = pthread_join(tinfo[i].thread_id, &x);
+            if (rc != 0) {
+                errno = rc;
+                perror("pthread_join");
+                exit(EXIT_FAILURE);
+            }
+
+          //printf("Joined with thread %d; returned value was %d\n",
+          //       tinfo[i].tnum, (int) x);
+
+            count += (unsigned int) x;
+
+        }
+
+        // Determine amount of time that was spent here.
+        gettimeofday(&tv2, NULL);
+        secs  = tv2.tv_sec - tv1.tv_sec;
+        usecs = secs*1000000 + tv2.tv_usec - tv1.tv_usec;
+
+
+
+        printf("nthreads: %d, Total Count: %d, usecs: %lu\n", nthreads, count, usecs);
+        free(tinfo);
     }
 
-    printf("Total Count: %d\n", count);
 
-   free(tinfo);
+
+
    free(data);
    exit(EXIT_SUCCESS);
 }
