@@ -103,7 +103,7 @@ int main() {
 			} else if (s == 6)
 				sleep(1);
 		}
-	        printrdyq();
+	        //printrdyq();
 
 	}
 

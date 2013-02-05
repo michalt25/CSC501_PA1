@@ -154,10 +154,8 @@ int resched()
             optr->counter = 0;
 
 
-        // XXX needed?
-        // If prev is not in the TASK_RUNNING state, schedule( ) was directly invoked by the process itself because it had to wait on some external resource; therefore, prev must be removed from the runqueue list:
 
-
+    // Until we have chosen a process
     while(1) {
 
         if (optr->pstate == PRCURR) {
@@ -168,10 +166,8 @@ int resched()
             weight = goodness(&proctab[nitem]);
         }
 
-        // Do i make the keys the weight?
-
-        // How to do round robin with weights?
-
+        // Go through all items in the rdy q and 
+        // Find the one with the most goodness.
         item = q[rdyhead].qnext;
         while (item != rdytail) {
             tmp = goodness(&proctab[item]);
@@ -189,26 +185,6 @@ int resched()
         // weight ==  0 - All quantum for all processes is exhausted
         // weight  >  0 - There is an eligible process
 
-
-      //if (weight == -1) {
-      //    if (currpid == NULLPROC)
-      //        if (optr->pstate == PRCURR)
-      //        return OK;
-
-      //    item = 0;
-      //    break;
-      //}
-
-      //if (weight > 0) {
-
-      //    if (currpid == nitem)
-      //        if (optr->pstate == PRCURR)
-      //        return OK;
-
-      //    item = nitem;
-      //    break;
-
-      //}
 
         // If no processes were eligible then the epoch is done.
         // Recalculate.
@@ -230,12 +206,6 @@ int resched()
     }
 
 
-    // If the ready queue is empty and the current proc is
-    // done then use NULL process.
-  //if ((optr->pstate != PRCURR) && isempty(rdyhead))
-  //    item = 0;
-
-
     // If we get here then we are not sticking with the current
     // process and we have a new process to context switch into. 
 
@@ -249,12 +219,7 @@ int resched()
     dequeue(item);              // Remove the process from the ready list  
     nptr = &proctab[currpid];   // Get a pointer to the PCB(pentry) for the proc
     nptr->pstate = PRCURR;      // mark it currently running
-
-// XXX need to only do this for LINUXSCHED
-  //if (item)
     preempt = nptr->counter;
-  //else 
-  //preempt = 10;
     
     ctxsw((int)&optr->pesp, (int)optr->pirmask, (int)&nptr->pesp, (int)nptr->pirmask);
     
