@@ -4,6 +4,8 @@
 #include <sched.h>
 #include <stdio.h>
 #include <math.h>
+#include <printprocstks.h>
+#include <printrdyq.h>
 
 #define LOOP	50
 
@@ -22,6 +24,7 @@ int main() {
 	char buf[8];
 
 	srand(1234);
+	int total;
 
 	kprintf("Please Input:\n");
 	while ((i = read(CONSOLE, buf, sizeof(buf))) < 1)
@@ -53,12 +56,27 @@ int main() {
 		case 1:
 			kprintf("\nTest2 RESULT: A = %d, B = %d, C = %d\n", a_cnt, b_cnt,
 					c_cnt);
+			total = a_cnt + b_cnt + c_cnt;
+			kprintf("\n%d\t%d\t%d\n", 
+				100*a_cnt/total,
+				100*b_cnt/total,
+				100*c_cnt/total
+			);
 			break;
 		}
 	}
 	// LINUXSCHED
 	else {
-		setschedclass(LINUXSCHED);
+	        kprintf("HERE1\n");
+	        printrdyq();
+	        sleep(2);
+	        kprintf("HERE2\n");
+	        printrdyq();
+	        setschedclass(LINUXSCHED);
+	        kprintf("HERE3\n");
+	        printrdyq();
+	        sleep(2);
+	        kprintf("HERE4\n");
 		switch (s) {
 		case 2:
 			resume(prA = create(proc, 2000, 5, "proc A", 1, 'A'));
@@ -66,6 +84,9 @@ int main() {
 			resume(prC = create(proc, 2000, 90, "proc C", 1, 'C'));
 			break;
 		}
+
+		//printprocstks(100);
+	//	sleep(2);
 
 		while (count++ < LOOP) {
 			kprintf("M");
@@ -82,6 +103,7 @@ int main() {
 			} else if (s == 6)
 				sleep(1);
 		}
+	        //printrdyq();
 
 	}
 

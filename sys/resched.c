@@ -219,7 +219,8 @@ int resched()
     dequeue(item);              // Remove the process from the ready list  
     nptr = &proctab[currpid];   // Get a pointer to the PCB(pentry) for the proc
     nptr->pstate = PRCURR;      // mark it currently running
-    preempt = nptr->counter;
+    if (class == LINUXSCHED)
+        preempt = nptr->counter;
     
     ctxsw((int)&optr->pesp, (int)optr->pirmask, (int)&nptr->pesp, (int)nptr->pirmask);
     

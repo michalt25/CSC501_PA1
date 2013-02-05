@@ -76,7 +76,7 @@ int main() {
 				chprio(prB, 60);
 				chprio(prC, 30);
 			}
-			if (s == 4 || s == 5 || s == 7) {
+			if (s == 2 || s == 5 || s == 7) {
 				for (i = 0; i < 10000000; i++)
 					;
 			} else if (s == 6)
@@ -151,7 +151,7 @@ proc(char c) {
 
 	while (count++ < LOOP) {
 		kprintf("%c", c);
-		if (s == 4 || s == 5 || s == 7) {
+		if (s == 2 || s == 5 || s == 7) {
 			for (i = 0; i < 10000000; i++)
 				;
 		} else if (s == 6) {

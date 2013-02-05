@@ -194,6 +194,23 @@ comoutput.o: ./../com/comoutput.c ../h/conf.h ../h/kernel.h \
   ../h/stdio.h
 comread.o: ./../com/comread.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/io.h
+string_search.o: ./../CONCURRENCY/string_search.c /usr/include/pthread.h \
+  /usr/include/features.h /usr/include/sys/cdefs.h \
+  /usr/include/gnu/stubs.h ../h/sched.h /usr/include/time.h \
+  /usr/lib/gcc/i386-redhat-linux/3.4.6/include/stddef.h \
+  /usr/include/bits/time.h /usr/include/bits/types.h \
+  /usr/include/bits/wordsize.h /usr/include/bits/typesizes.h \
+  /usr/include/signal.h /usr/include/bits/sigset.h \
+  /usr/include/bits/pthreadtypes.h /usr/include/bits/sched.h \
+  /usr/include/bits/initspin.h /usr/include/bits/sigthread.h \
+  /usr/include/string.h ../h/stdio.h /usr/include/stdlib.h \
+  /usr/include/sys/types.h /usr/include/endian.h \
+  /usr/include/bits/endian.h /usr/include/sys/select.h \
+  /usr/include/bits/select.h /usr/include/sys/sysmacros.h \
+  /usr/include/alloca.h /usr/include/errno.h /usr/include/bits/errno.h \
+  /usr/include/linux/errno.h /usr/include/asm/errno.h \
+  /usr/include/sys/stat.h /usr/include/bits/stat.h \
+  /usr/include/sys/time.h
 lex.yy.o: ./../config/lex.yy.c ../h/stdio.h /usr/include/string.h \
   /usr/include/features.h /usr/include/sys/cdefs.h \
   /usr/include/gnu/stubs.h \
@@ -339,7 +356,7 @@ blkcmp.o: ./../sys/blkcmp.c
 blkequ.o: ./../sys/blkequ.c ../h/kernel.h ../h/systypes.h ../h/conf.h \
   ../h/mem.h
 chprio.o: ./../sys/chprio.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
-  ../h/mem.h ../h/proc.h ../h/q.h ../h/stdio.h
+  ../h/mem.h ../h/proc.h ../h/q.h ../h/stdio.h ../h/sched.h
 clkinit.o: ./../sys/clkinit.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/sleep.h ../h/i386.h ../h/stdio.h ../h/q.h
 close.o: ./../sys/close.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
@@ -397,10 +414,11 @@ kprintf.o: ./../sys/kprintf.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
 kputc.o: ./../sys/kputc.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/tty.h
 main.o: ./../sys/main.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
-  ../h/mem.h ../h/proc.h ../h/stdio.h
+  ../h/mem.h ../h/q.h ../h/sched.h ../h/stdio.h ../h/math.h \
+  ../h/printprocstks.h ../h/printrdyq.h
 mark.o: ./../sys/mark.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/mark.h
-math.o: ./../sys/math.c
+math.o: ./../sys/math.c ../h/stdio.h
 mkpool.o: ./../sys/mkpool.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/mark.h ../h/bufpool.h ../h/stdio.h
 newqueue.o: ./../sys/newqueue.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
@@ -413,6 +431,10 @@ pci.o: ./../sys/pci.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/pci.h ../h/stdio.h
 poolinit.o: ./../sys/poolinit.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/mark.h ../h/bufpool.h ../h/stdio.h
+printprocstks.o: ./../sys/printprocstks.c ../h/kernel.h ../h/systypes.h \
+  ../h/conf.h ../h/mem.h ../h/proc.h ../h/stdio.h ../h/q.h
+printrdyq.o: ./../sys/printrdyq.c ../h/kernel.h ../h/systypes.h \
+  ../h/conf.h ../h/mem.h ../h/proc.h ../h/stdio.h ../h/q.h
 putc.o: ./../sys/putc.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/io.h
 queue.o: ./../sys/queue.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
@@ -428,9 +450,10 @@ recvclr.o: ./../sys/recvclr.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
 recvtim.o: ./../sys/recvtim.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/proc.h ../h/q.h ../h/sleep.h ../h/stdio.h
 resched.o: ./../sys/resched.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
-  ../h/mem.h ../h/proc.h ../h/q.h ../h/math.h
+  ../h/mem.h ../h/proc.h ../h/q.h ../h/math.h ../h/sched.h
 resume.o: ./../sys/resume.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/proc.h ../h/stdio.h
+sched.o: ./../sys/sched.c ../h/sched.h
 scount.o: ./../sys/scount.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/sem.h
 screate.o: ./../sys/screate.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
@@ -485,13 +508,8 @@ test3.o: ./../tests/test3.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
 test4.o: ./../tests/test4.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/q.h
 testmain.o: ./../tests/testmain.c ../h/conf.h ../h/kernel.h \
-  ../h/systypes.h ../h/mem.h ../h/q.h /usr/include/sched.h \
-  /usr/include/features.h /usr/include/sys/cdefs.h \
-  /usr/include/gnu/stubs.h /usr/include/bits/types.h \
-  /usr/include/bits/wordsize.h \
-  /usr/lib/gcc/i386-redhat-linux/3.4.6/include/stddef.h \
-  /usr/include/bits/typesizes.h /usr/include/time.h \
-  /usr/include/bits/sched.h ../h/stdio.h ../h/math.h
+  ../h/systypes.h ../h/mem.h ../h/q.h ../h/sched.h ../h/stdio.h \
+  ../h/math.h
 ttyalloc.o: ./../tty/ttyalloc.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
   ../h/mem.h ../h/tty.h ../h/stdio.h
 ttycntl.o: ./../tty/ttycntl.c ../h/conf.h ../h/kernel.h ../h/systypes.h \
@@ -545,3 +563,8 @@ strncat.o: ./../lib/libxc/strncat.c
 strncmp.o: ./../lib/libxc/strncmp.c
 strncpy.o: ./../lib/libxc/strncpy.c
 swab.o: ./../lib/libxc/swab.c
+ExpRoundRobin.o: ./../tests/dusty/ExpRoundRobin.c ../h/conf.h \
+  ../h/kernel.h ../h/systypes.h ../h/mem.h ../h/q.h
+testmain.o: ./../tests/dusty/testmain.c ../h/conf.h ../h/kernel.h \
+  ../h/systypes.h ../h/mem.h ../h/q.h ../h/sched.h ../h/stdio.h \
+  ../h/math.h ../h/printprocstks.h ../h/printrdyq.h
